@@ -1,5 +1,8 @@
 
 import random 
+import matplotlib.pyplot as plt
+import numpy as np
+import math
 
 # returns random list of integers, non repeating, within the range
 # to represent members of the population
@@ -25,9 +28,12 @@ def evaluate(member, distances):
 
 	# add the distances between each city on the path
 	for i in range(0, len(member) - 1):
+
 		x = distances[member[i]][member[i + 1]]
 		totalDistance += x
 
+	# distance from last stop back to start
+	totalDistance += distances[member[-1:][0]][ member[0]]
 	return totalDistance
 
 # returns the average total distance of the population
@@ -57,28 +63,38 @@ def select(population, distances, size):
 	population = [x for _,x in sorted(zip(fitnesses, population))]
 
 	# return the "size" members with the lowest associated path length
+
 	for i in range(0, size):
 		newPopulation.append(population[i])
+
 
 	return newPopulation
 
 # just a readable format for testing
-def printPopulation(population):
+def printPopulation(population, distances):
 	print "Population:"
 	for i, member in enumerate (population):
-		print i, "-", member
+		print i, "-", member, evaluate(member, distances)
 
 # create a child for each member (with the next indexed member, 
 # less the final member) and add it to the population
-def crossover(population, distances):
+def crossover(population, distances, sizeEntries):
 	newPopulation = population
-
+	size = len(population) * 3
 	# loop over members of population and create new members using each adjacent pair
 	for i in range(0, len(population) - 1):
 		x = combine(population[i], population[i + 1], distances)
-		newPopulation.append(x)
+		if x not in newPopulation:
+			newPopulation.append(x)
 		x = combine(population[i + 1], population[i], distances)
-		newPopulation.append(x)
+		if x not in newPopulation:
+			newPopulation.append(x)
+
+	while (len(newPopulation) < size):
+		member = random.sample(range(0, sizeEntries), sizeEntries)
+		if member not in newPopulation:
+			newPopulation.append(member)
+	
 
 	return newPopulation
 
@@ -126,10 +142,11 @@ def findShortestdistance(member, distances):
 def mutate(population):
 	
 	newPopulation = population
-	mod = random.randint(1, 10)
+	mod = random.randint(1, 5)
 
+	
 	# loop over population and once every "mod" entries, swap the order of two random values
-	for i in range(0, len(newPopulation)):
+	for i in range(5, len(newPopulation)):
 		if i % mod == 0:
 			a = random.randint(0, len(newPopulation[0])-1)
 			b = random.randint(0, len(newPopulation[0])-1)
@@ -162,17 +179,56 @@ def travellingSalesmanGenetic(numEntries, sizeEntries, distances, numGenerations
 
 	# loop numGenerations times, select, crossover and mutate the population every iteration
 	for i in range (0, numGenerations):
+		#lowest, lowestIndex = getLowest(population, distances)
+		#print lowest, len(population)
 		population =	mutate(
 						crossover(
-						select(population, distances, numEntries), distances))
+						select(population, distances, numEntries), distances, sizeEntries))
 
 	# finally, take the shortest path in the remaining population 
 	lowest, lowestIndex = getLowest(population, distances)
+	#printPopulation(population, distances)
 	return population[lowestIndex], evaluate(population[lowestIndex], distances)
 
+def getDistances(locations):
+	distances = []
+
+	for i in range(0, len(locations)):
+		distancesI = []
+		for j in range(0, len(locations)):
+
+			dist = math.hypot(locations[i][0] - locations[j][0], locations[i][1] - locations[j][1])
+			distancesI.append(dist)
+		distances.append(distancesI)
+	return distances
+
+def plotCities(locations):
+	plt.xticks(np.arange(0, 201, 20))
+	plt.yticks(np.arange(0, 201, 20))
+	plt.grid(True)
+
+	x = []
+	y = []
+
+	for i in range(0, len(locations)):
+		#plt.plot(cityLocations)
+		#plt.plot(cityLocations[i][0], cityLocations[i][1], "ro-")
+		x.append(locations[i][0])
+		y.append(locations[i][1])
+
+	for i in range(0, len(locations), 1):
+	    plt.plot(x[i:i+2], y[i:i+2], 'ro-')
+
+	plt.show()
+
+def sortByPath(path, locations):
+	sortedLocations = []
+	for i in path:
+		sortedLocations.append(locations[i])
+	return sortedLocations
 
 #############################################################################################
-################                            MAIN                             ################
+################                            MAIN   1                         ################
 #############################################################################################
 
 numEntries = 100
@@ -198,3 +254,54 @@ print "Shortest path:", cityList[bestPath[0]],
 for i, city in enumerate(bestPath[1:]):
 	print  "->", cityList[city],
 print "\nTotal Distance: ", distance
+
+
+#############################################################################################
+################                            MAIN   2                         ################
+#############################################################################################
+
+
+
+# cityLocations = 	[	[20, 20],
+# 						[20, 40],
+# 						[20, 160],
+# 						[40, 120],
+# 						[60, 20],
+# 						[60, 80],
+# 						[60, 200],
+# 						[80, 180],
+# 						[100, 40],
+# 						[100, 120],
+# 						[100, 160],
+# 						[120, 80],
+# 						[140, 140],
+# 						[140, 180],
+# 						[160, 20],
+# 						[180, 60],
+# 						[180, 100],
+# 						[180, 200],
+# 						[200, 40],
+# 						[200, 160]]
+
+
+
+# distancesBetweenCities = getDistances(cityLocations)
+
+# # numEntries must be < sizeEntries! factorial
+# numEntries = 500
+# sizeEntries = len(cityLocations) -1
+# #print sizeEntries
+# numGenerations = 1000
+# #print distancesBetweenCities[0]
+# bestPath, distance = travellingSalesmanGenetic(numEntries, sizeEntries, distancesBetweenCities, numGenerations)
+
+# cityLocations = sortByPath(bestPath, cityLocations)
+
+
+# print "Shortest path:", bestPath[0],
+# for i, city in enumerate(bestPath[1:]):
+# 	print  "->", bestPath[i],
+# print "\nTotal Distance: ", distance
+
+
+# plotCities(cityLocations)
